@@ -24,7 +24,7 @@
 
 ####################### IMPORT MODULES #######################
 import pandas 
-import torch
+import torch 
 import numpy 
 ###################### Additional Imports ####################
 '''
@@ -36,7 +36,6 @@ cause errors while running the executable
 ##############################################################
 
 ################# ADD UTILITY FUNCTIONS HERE #################
-
 
 
 
@@ -74,11 +73,18 @@ def data_preprocessing(task_1a_dataframe):
 	'''
 
 	#################	ADD YOUR CODE HERE	##################
-
-	##########################################################
-
+	
+	from sklearn.preprocessing import LabelEncoder
+	encoded_dataframe=task_1a_dataframe.copy()
+	label_encoder=LabelEncoder()
+	encoded_dataframe['Education'] = label_encoder.fit_transform(encoded_dataframe['Education'])
+	encoded_dataframe['Gender'] = label_encoder.fit_transform(encoded_dataframe['Gender'])
+	encoded_dataframe['City'] = label_encoder.fit_transform(encoded_dataframe['City'])
 	return encoded_dataframe
 
+
+
+	##########################################################
 def identify_features_and_targets(encoded_dataframe):
 	'''
 	Purpose:
@@ -342,12 +348,13 @@ if __name__ == "__main__":
 
 	# data preprocessing and obtaining encoded data
 	encoded_dataframe = data_preprocessing(task_1a_dataframe)
+	
 
 	# selecting required features and targets
 	features_and_targets = identify_features_and_targets(encoded_dataframe)
 
 	# obtaining training and validation data tensors and the iterable
-	# training data object
+	#training data object
 	tensors_and_iterable_training_data = load_as_tensors(features_and_targets)
 	
 	# model is an instance of the class that defines the architecture of the model
@@ -369,3 +376,4 @@ if __name__ == "__main__":
 	X_train_tensor = tensors_and_iterable_training_data[0]
 	x = X_train_tensor[0]
 	jitted_model = torch.jit.save(torch.jit.trace(model, (x)), "task_1a_trained_model.pth")
+
