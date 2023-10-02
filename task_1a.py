@@ -36,12 +36,12 @@ cause errors while running the executable
 ##############################################################
 
 ################# ADD UTILITY FUNCTIONS HERE #################
-
+import torch.nn as nn
 
 
 
 ##############################################################
-
+ 
 def data_preprocessing(task_1a_dataframe):
 
 	''' 
@@ -80,12 +80,17 @@ def data_preprocessing(task_1a_dataframe):
 	encoded_dataframe['Education'] = label_encoder.fit_transform(encoded_dataframe['Education'])
 	encoded_dataframe['Gender'] = label_encoder.fit_transform(encoded_dataframe['Gender'])
 	encoded_dataframe['City'] = label_encoder.fit_transform(encoded_dataframe['City'])
+	encoded_dataframe['EverBenched']=label_encoder.fit_transform(encoded_dataframe['City'])
+	encoded_dataframe['JoiningYear']=label_encoder.fit_transform(encoded_dataframe['JoiningYear'])
+	
+	encoded_dataframe.fillna(-1, inplace=True)
 	return encoded_dataframe
 
 
 
 	##########################################################
 def identify_features_and_targets(encoded_dataframe):
+	df=encoded_dataframe
 	'''
 	Purpose:
 	---
@@ -112,11 +117,22 @@ def identify_features_and_targets(encoded_dataframe):
 	'''
 
 	#################	ADD YOUR CODE HERE	##################
-	
-	##########################################################
+	 # Assuming that the target column is the last column in the DataFrame
+	target_label_name =  df.columns[-1]
+	target_label=encoded_dataframe[target_label_name]
 
+		# Selecting all columns except the last one as features
+	features_name = df.columns[:-1]
+
+	features = encoded_dataframe[features_name]
+   
+		# Creating a list with features and target label
+	features_and_targets = [features, target_label]
+
+
+		
+		#########################################################
 	return features_and_targets
-
 
 def load_as_tensors(features_and_targets):
 
@@ -145,7 +161,7 @@ def load_as_tensors(features_and_targets):
 											[2]: y_train_tensor: Training labels as Pytorch tensor
 											[3]: y_test_tensor: Target labels as tensor in validation data
 											[4]: Iterable dataset object and iterating over it in 
-												 batches, which are then fed into the model for processing
+												 batches, which are then fed into the model for processing.
 
 	Example call:
 	---
@@ -153,12 +169,37 @@ def load_as_tensors(features_and_targets):
 	'''
 
 	#################	ADD YOUR CODE HERE	##################
+	from torch.utils.data import TensorDataset, DataLoader
+	features=features_and_targets[0].to_numpy()
+	targets=features_and_targets[1].to_numpy()
+	from sklearn.model_selection import train_test_split
+	X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, shuffle=True)
+
+		# Convert NumPy arrays to PyTorch tensors
+	X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
+	y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
+	X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
+	y_test_tensor = torch.tensor(y_test, dtype=torch.float32)
+
+
+		# Create TensorDataset for training
+	train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+
+		# Create DataLoader for training
+	train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+
+		# Return the tensors and iterable training data
+	tensors_and_iterable_training_data = [X_train_tensor, X_test_tensor, y_train_tensor, y_test_tensor, train_loader]
+
+
+
+
 	
 	##########################################################
 
 	return tensors_and_iterable_training_data
 
-class Salary_Predictor():
+class Salary_Predictor(nn.Module):
 	'''
 	Purpose:
 	---
@@ -175,12 +216,16 @@ class Salary_Predictor():
 	`predicted_output` : Predicted output for the given input data
 	'''
 	def __init__(self):
+		import torch.nn as nn 
 		super(Salary_Predictor, self).__init__()
 		'''
 		Define the type and number of layers
 		'''
 		#######	ADD YOUR CODE HERE	#######
-		
+		self.fc1 = nn.Linear(8, 16)  # Input size: 8, Hidden size: 16
+		self.sigmoid = nn.Sigmoid()  # Activation function (Sigmoid)
+		self.fc2 = nn.Linear(16, 1)  # Hidden size: 16, Output size: 1 (binary)
+
 		###################################	
 
 	def forward(self, x):
@@ -188,12 +233,15 @@ class Salary_Predictor():
 		Define the activation functions
 		'''
 		#######	ADD YOUR CODE HERE	#######
-		
+		x = self.fc1(x)
+		x = self.sigmoid(x)  # Apply sigmoid activation
+		predicted_output = self.fc2(x)
 		###################################
 
 		return predicted_output
 
 def model_loss_function():
+	import torch.nn as nn
 	'''
 	Purpose:
 	---
@@ -215,12 +263,13 @@ def model_loss_function():
 	loss_function = model_loss_function()
 	'''
 	#################	ADD YOUR CODE HERE	##################
-	
+	loss_function=nn.CrossEntropyLoss() #we need to decide which loss function is best, or should we define it ourselves
 	##########################################################
 	
 	return loss_function
 
 def model_optimizer(model):
+	import torch.optim as optim
 	'''
 	Purpose:
 	---
@@ -241,6 +290,9 @@ def model_optimizer(model):
 	optimizer = model_optimizer(model)
 	'''
 	#################	ADD YOUR CODE HERE	##################
+	parameters = filter(lambda p: p.requires_grad, model.parameters()) 
+	learning_rate = 0.01  # Set your desired learning rate
+	optimizer = optim.SGD(parameters, lr=learning_rate, momentum=0.9)
 
 	##########################################################
 
@@ -265,8 +317,8 @@ def model_number_of_epochs():
 	number_of_epochs = model_number_of_epochs()
 	'''
 	#################	ADD YOUR CODE HERE	##################
-
-	##########################################################
+	number_of_epochs = 50 #this is a hyper-param and it's value should be changed depending on model's performance.
+		##########################################################
 
 	return number_of_epochs
 
@@ -296,6 +348,41 @@ def training_function(model, number_of_epochs, tensors_and_iterable_training_dat
 	'''	
 	#################	ADD YOUR CODE HERE	##################
 	
+	for epoch in range(number_of_epochs):
+		model.train()
+		total_loss = 0.0
+
+        # Iterate over the training data in batches
+		for inputs, labels in tensors_and_iterable_training_data[4]:
+			labels = labels.to(torch.float32)
+
+					
+					# Zero the gradients
+			optimizer.zero_grad()
+
+					# Forward pass
+			outputs = model(inputs).squeeze(1)
+        	
+			outputs=outputs.to(torch.float32)	
+
+					# Compute the loss
+			loss = loss_function(outputs, labels)
+
+					# Backpropagation
+			loss.backward()
+
+					# Update model parameters
+			optimizer.step()
+
+			total_loss += loss.item()
+	# Calculate and print the average loss for this epoch
+		average_loss=total_loss/len(tensors_and_iterable_training_data[4])	
+		print(f'Epoch [{epoch + 1}/{number_of_epochs}] - Loss: {average_loss:.4f}')
+    
+	trained_model=model
+
+
+	
 	##########################################################
 
 	return trained_model
@@ -324,8 +411,36 @@ def validation_function(trained_model, tensors_and_iterable_training_data):
 
 	'''	
 	#################	ADD YOUR CODE HERE	##################
+	X_test_tensor = tensors_and_iterable_training_data[1]
+    
+	y_test_tensor = tensors_and_iterable_training_data[3]
 
-	##########################################################
+	# Ensure the model is in evaluation mode
+    
+	trained_model.eval()
+
+    # Perform predictions on the validation data
+    
+	with torch.no_grad():
+        # Forward pass
+        
+		predicted_outputs = trained_model(X_test_tensor)
+
+        # Convert predicted outputs to class labels
+        
+		predicted_labels = (predicted_outputs >= 0.5).squeeze().int()
+	
+	    # Calculate accuracy
+		correct_predictions = (predicted_labels == y_test_tensor).sum().item()
+		total_samples = len(y_test_tensor)
+		model_accuracy = (correct_predictions / total_samples) * 100.0
+
+
+	
+		
+		
+
+		##########################################################
 
 	return model_accuracy
 
@@ -348,6 +463,7 @@ if __name__ == "__main__":
 
 	# data preprocessing and obtaining encoded data
 	encoded_dataframe = data_preprocessing(task_1a_dataframe)
+	print(encoded_dataframe) 
 	
 
 	# selecting required features and targets
@@ -356,9 +472,11 @@ if __name__ == "__main__":
 	# obtaining training and validation data tensors and the iterable
 	#training data object
 	tensors_and_iterable_training_data = load_as_tensors(features_and_targets)
+	print('ran successfully')
 	
 	# model is an instance of the class that defines the architecture of the model
 	model = Salary_Predictor()
+	print("ran successfully")
 
 	# obtaining loss function, optimizer and the number of training epochs
 	loss_function = model_loss_function()
@@ -368,7 +486,8 @@ if __name__ == "__main__":
 	# training the model
 	trained_model = training_function(model, number_of_epochs, tensors_and_iterable_training_data, 
 					loss_function, optimizer)
-
+    
+	print("ran successfully")
 	# validating and obtaining accuracy
 	model_accuracy = validation_function(trained_model,tensors_and_iterable_training_data)
 	print(f"Accuracy on the test set = {model_accuracy}")
