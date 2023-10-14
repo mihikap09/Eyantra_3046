@@ -15,7 +15,7 @@
 *****************************************************************************************
 '''
 
-# Team ID:			[ 3046 ]
+# Team ID:			[ Team-ID ]
 # Author List:		[ Mihika Pathak, Deshna Badjatya, Swasti Kataria, Devansh Ramdurgekar ]
 # Filename:			task_2a.py
 # Functions:		detect_ArUco_details
@@ -31,6 +31,7 @@ import numpy as np
 import cv2
 from cv2 import aruco
 import math
+
 ##############################################################
 
 ################# ADD UTILITY FUNCTIONS HERE #################
@@ -97,18 +98,33 @@ def detect_ArUco_details(image):
     """    
     ArUco_details_dict = {}
     ArUco_corners = {}
-    ##############	ADD YOUR CODE HERE	##############
-    arucoDict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
-    arucoParams = cv2.aruco.DetectorParameters()
     
-    matlike = (cv2.UMat(image))
-    print(type(matlike))
-    corners, ids, _ = aruco.ArucoDetector.detectMarkers(matlike, (arucoDict), parameters=arucoParams)
+    ##############	ADD YOUR CODE HERE	##############
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_100)
+    parameters = cv2.aruco.DetectorParameters()
+    detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+    corners, ids, rejected = detector.detectMarkers(img)
+    if ids is not None:
+        for i in range(len(ids)):
+            # Get the four corner coordinates of the marker
+            marker_corners = corners[i][0]
 
-    cv2.aruco.drawDetectedMarkers(image, corners, ids)
+            # Calculate the center coordinates of the marker
+            cx = int((marker_corners[0][0] + marker_corners[2][0]) / 2)
+            cy = int((marker_corners[0][1] + marker_corners[2][1]) / 2)
 
+            # Calculate the angle of the marker
+            angle = math.degrees(math.atan2(marker_corners[1][1] - marker_corners[0][1],
+                                            marker_corners[1][0] - marker_corners[0][0]))
 
-
+            # print(f"ID: {ids[i][0]}")
+            # print(f"Marker Corners: {marker_corners}")
+            # print(f"Center Coordinates (x, y): ({cx}, {cy})")
+            # print(f"Angle: {angle} degrees")
+            ArUco_details_dict[ids[i][0]] = [[cx,cy],angle]
+            ArUco_corners[ids[i][0]]=marker_corners
+            print(ArUco_corners)
+            print(ArUco_details_dict)
     ##################################################
     
     return ArUco_details_dict, ArUco_corners 
