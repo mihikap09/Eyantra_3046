@@ -1,51 +1,45 @@
 from keras.preprocessing.image import ImageDataGenerator
-from keras.preprocessing import image
-from keras import models, layers, optimizers
-import keras
-from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+import keras.optimizers
 
-set_values = ['combat', 'destroyedbuildings', 'fire',
-              'humanitarianaidandrehabilitation', 'militaryvehiclesandweapons']
+# Define data augmentation and preprocessing
+train_datagen = ImageDataGenerator(
+    rescale=1/255,  # Rescale pixel values to [0, 1]
+    rotation_range=20,  # Augmentation: randomly rotate images up to 20 degrees
+    width_shift_range=0.2,  # Augmentation: horizontally shift images
+    height_shift_range=0.2,  # Augmentation: vertically shift images
+    shear_range=0.2,  # Augmentation: shear transformation
+    zoom_range=0.2,  # Augmentation: random zoom
+    horizontal_flip=True,  # Augmentation: flip horizontally
+    fill_mode='nearest'  # How to fill in newly created pixels
+)
 
-for dataset in set_values:
-    for numval in range(1, 81):
-        img = None
-        file_extensions = ['jpeg', 'png', 'jpg']
-        for extension in file_extensions:
-            imval = f"training/{dataset}/{numval}.{extension}"
-            try:
-                img = image.load_img(imval, target_size=(150, 150))
-                # print(cv2.imread(imval).shape)
-                # Break out of the loop if the image is successfully loaded
-            except FileNotFoundError:
-                pass  # Continue to the next file extension
-        if img is None:
-            print(f"File NOT FOUND for {dataset}/{numval}.")
+# Load and preprocess your data
+train_dataset = train_datagen.flow_from_directory(
+    'training/', target_size=(150, 150), batch_size=32, class_mode='categorical')
 
-train = ImageDataGenerator(rescale=1/255)
-train_dataset = train.flow_from_directory(
-    'training/', target_size=(150, 150), batch_size=20, class_mode='categorical')
-train_dataset.classes
+# Create a CNN model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)))
+model.add(MaxPooling2D(2, 2))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D(2, 2))
+model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(MaxPooling2D(2, 2))
+model.add(Flatten())
+model.add(Dense(512, activation='relu'))
+model.add(Dropout(0.25))  # Add dropout to reduce overfitting
+model.add(Dense(5, activation='softmax'))  # Output layer with 5 units for 5 classes
 
-# One-hot encode the labels
-y_train_one_hot = to_categorical(train_dataset.classes, num_classes=5)
+# Compile the model
+optim = keras.optimizers.Adam(learning_rate=0.0015)
+model.compile(loss='categorical_crossentropy',
+              optimizer=optim,
+              metrics=['accuracy'])
 
-model = models.Sequential([
-    layers.Conv2D(16, (3, 3), activation='relu', input_shape=(150, 150, 3)),
-    layers.MaxPool2D(2, 2),
-    layers.Conv2D(16, (3, 3), activation='sigmoid'),
-    layers.MaxPool2D(2, 2),
-    layers.Conv2D(32, (3, 3), activation='sigmoid'),
-    layers.MaxPool2D(2, 2),
-    layers.Conv2D(64, (3, 3), activation='relu'),
-    layers.MaxPool2D(2, 2),
-    layers.Flatten(),
-    layers.Dense(512, activation='relu'),
-    layers.Dense(5, activation='softmax')
-])
+# Train the model
+model.fit(train_dataset, epochs=45)  # You can adjust the number of epochs
 
-# Use Adam optimizer for image classification
-optim = optimizers.Adam(learning_rate=0.001)
-
-model.compile(loss='categorical_crossentropy', optimizer=optim, metrics=['accuracy'])
-model_fit = model.fit(train_dataset, epochs=15)
+# Save the trained model if desired
+# model.save('my_trained_model.h5')
