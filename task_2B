@@ -1,0 +1,51 @@
+from keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing import image
+from keras import models, layers, optimizers
+import keras
+from keras.utils import to_categorical
+
+set_values = ['combat', 'destroyedbuildings', 'fire',
+              'humanitarianaidandrehabilitation', 'militaryvehiclesandweapons']
+
+for dataset in set_values:
+    for numval in range(1, 81):
+        img = None
+        file_extensions = ['jpeg', 'png', 'jpg']
+        for extension in file_extensions:
+            imval = f"training/{dataset}/{numval}.{extension}"
+            try:
+                img = image.load_img(imval, target_size=(150, 150))
+                # print(cv2.imread(imval).shape)
+                # Break out of the loop if the image is successfully loaded
+            except FileNotFoundError:
+                pass  # Continue to the next file extension
+        if img is None:
+            print(f"File NOT FOUND for {dataset}/{numval}.")
+
+train = ImageDataGenerator(rescale=1/255)
+train_dataset = train.flow_from_directory(
+    'training/', target_size=(150, 150), batch_size=20, class_mode='categorical')
+train_dataset.classes
+
+# One-hot encode the labels
+y_train_one_hot = to_categorical(train_dataset.classes, num_classes=5)
+
+model = models.Sequential([
+    layers.Conv2D(16, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+    layers.MaxPool2D(2, 2),
+    layers.Conv2D(16, (3, 3), activation='sigmoid'),
+    layers.MaxPool2D(2, 2),
+    layers.Conv2D(32, (3, 3), activation='sigmoid'),
+    layers.MaxPool2D(2, 2),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPool2D(2, 2),
+    layers.Flatten(),
+    layers.Dense(512, activation='relu'),
+    layers.Dense(5, activation='softmax')
+])
+
+# Use Adam optimizer for image classification
+optim = optimizers.Adam(learning_rate=0.001)
+
+model.compile(loss='categorical_crossentropy', optimizer=optim, metrics=['accuracy'])
+model_fit = model.fit(train_dataset, epochs=15)
