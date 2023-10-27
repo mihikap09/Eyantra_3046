@@ -16,8 +16,8 @@
 '''
 ############################## FILL THE MANDATORY INFORMATION BELOW ###############################
 
-# Team ID:			[ 3046]
-# Author List:		[ devansh ramdurgekar, mihika pathak ]
+# Team ID:			[ Team-ID ]
+# Author List:		[ Names of team members worked on this file separated by Comma: Name1, Name2, ... ]
 # Filename:			task_2b.py
 # Functions:	    [`classify_event(image)` ]
 ###################################################################################################
@@ -35,14 +35,8 @@ import os
 '''
 You can import your required libraries here
 '''
-'''import torch
-import torch.nn as nn
-import torchvision.models as models
-import torchvision.transforms as transforms
-from torchvision import datasets
-from torch.autograd import Variable
-from PIL import Image'''
 import tensorflow as tf
+from keras.preprocessing import image as keras_image
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
@@ -58,9 +52,9 @@ img_name_list = []
 
 # Declaring Variables
 '''
-You can delare the necessary variables here'''
+You can delare the necessary variables here
+'''
 model = tf.keras.models.load_model("C://Users//HP//my_trained_model.keras")
-
 
 # EVENT NAMES
 '''
@@ -100,12 +94,9 @@ def classify_event(image):
     '''
     ADD YOUR CODE HERE
     '''
-     # Load a pre-trained tensorflow model model
-    
-    
     # Load and preprocess the image
-    img = image.load_img(image, target_size=(150, 150))  # Assuming target size is (150, 150)
-    img = image.img_to_array(img)
+    img = keras_image.load_img(image, target_size=(150, 150))  # Assuming target size is (150, 150)
+    img = keras_image.img_to_array(img)
     img = np.expand_dims(img, axis=0)  # Add a batch dimension
 
     # Preprocess the image data based on your model's requirements (e.g., normalization)
@@ -122,13 +113,13 @@ def classify_event(image):
 
     
     return event
-      
+    #event = "variable to return the detected function"
+    
 
 # ADDITIONAL FUNCTIONS
 '''
 Although not required but if there are any additonal functions that you're using, you shall add them here. 
 '''
-
 
 ###################################################################################################
 ########################### DO NOT MAKE ANY CHANGES IN THE SCRIPT BELOW ###########################
