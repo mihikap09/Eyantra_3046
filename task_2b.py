@@ -35,13 +35,21 @@ import os
 '''
 You can import your required libraries here
 '''
-import torch
+'''import torch
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
 from torchvision import datasets
 from torch.autograd import Variable
-from PIL import Image
+from PIL import Image'''
+import tensorflow as tf
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+import keras.optimizers
+import numpy as np
+from keras.models import load_model
+from keras.preprocessing.image import load_img, img_to_array
 
 # DECLARING VARIABLES (DO NOT CHANGE/REMOVE THESE VARIABLES)
 detected_list = []
@@ -50,8 +58,9 @@ img_name_list = []
 
 # Declaring Variables
 '''
-You can delare the necessary variables here
-'''
+You can delare the necessary variables here'''
+model = tf.keras.models.load_model("C://Users//HP//my_trained_model.keras")
+
 
 # EVENT NAMES
 '''
@@ -91,45 +100,35 @@ def classify_event(image):
     '''
     ADD YOUR CODE HERE
     '''
-     # Load a pre-trained ResNet-18 model
-    model = models.resnet18(weights='DEFAULT')
-    model.eval()
-   
-    image = load_and_preprocess_image(image)
-
-    # Forward pass
-    with torch.no_grad():
-        outputs = model(image)
+     # Load a pre-trained tensorflow model model
     
-    _, predicted_class = outputs.max(1)
+    
+    # Load and preprocess the image
+    img = image.load_img(image, target_size=(150, 150))  # Assuming target size is (150, 150)
+    img = image.img_to_array(img)
+    img = np.expand_dims(img, axis=0)  # Add a batch dimension
 
-     # Map the class index to class label (you may need to define your own class labels)
-    class_labels = [combat, rehab, military_vehicles, fire, destroyed_building]  # Modify with your own class labels
-    predicted_class = outputs.argmax()
-    event = class_labels[min(predicted_class, len(class_labels) - 1)]
-    #event = "variable to return the detected function"
+    # Preprocess the image data based on your model's requirements (e.g., normalization)
+    img = img / 255.0  # Normalize pixel values to [0, 1]
 
+    # Make predictions using the model
+    predictions = model.predict(img)
+    class_labels = ["combat", "rehab", "military_vehicles", "fire", "destroyed_building"]
 
+    # Assuming 'predictions' is the model's output
+    predicted_class_index = np.argmax(predictions)
+    # Decode predictions or get the class label (modify this part based on your model's output)
+    event = class_labels[predicted_class_index]
+
+    
     return event
+      
 
 # ADDITIONAL FUNCTIONS
 '''
 Although not required but if there are any additonal functions that you're using, you shall add them here. 
 '''
-def load_and_preprocess_image(img):
-    # Define transformations to apply to the image
-    preprocess = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-    
-    # Load and preprocess the image
-    image = Image.open(img)
-    image = preprocess(image)
-    image = image.unsqueeze(0)  # Add a batch dimension
-    return image
+
 
 ###################################################################################################
 ########################### DO NOT MAKE ANY CHANGES IN THE SCRIPT BELOW ###########################
