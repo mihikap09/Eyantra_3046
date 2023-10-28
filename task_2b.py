@@ -16,8 +16,8 @@
 '''
 ############################## FILL THE MANDATORY INFORMATION BELOW ###############################
 
-# Team ID:			[ Team-ID ]
-# Author List:		[ Names of team members worked on this file separated by Comma: Name1, Name2, ... ]
+# Team ID:			[ 3046 ]
+# Author List:		[ Devansh Ramdurgekar, deshna badjatya ]
 # Filename:			task_2b.py
 # Functions:	    [`classify_event(image)` ]
 ###################################################################################################
@@ -54,8 +54,7 @@ img_name_list = []
 '''
 You can delare the necessary variables here
 '''
-model = tf.keras.models.load_model("C://Users//HP//my_trained_model.keras")
-
+model = tf.keras.models.load_model("C://Users//HP//vgg16_model.keras")
 # EVENT NAMES
 '''
 We have already specified the event names that you should train your model with.
@@ -104,17 +103,14 @@ def classify_event(image):
 
     # Make predictions using the model
     predictions = model.predict(img)
-    class_labels = ["combat", "rehab", "military_vehicles", "fire", "destroyed_building"]
+    class_labels = ["combat", "humanitarianaid", "militaryvehicles", "fire", "destroyedbuilding"]
 
     # Assuming 'predictions' is the model's output
     predicted_class_index = np.argmax(predictions)
     # Decode predictions or get the class label (modify this part based on your model's output)
     event = class_labels[predicted_class_index]
-
-    
+    event = "variable to return the detected function"
     return event
-    #event = "variable to return the detected function"
-    
 
 # ADDITIONAL FUNCTIONS
 '''
