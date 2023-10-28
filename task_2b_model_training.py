@@ -1,80 +1,97 @@
-
-from keras.preprocessing.image import ImageDataGenerator
+import tensorflow as tf
+import keras
+from keras.applications import VGG16
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
-import keras.optimizers
-import os
+from keras.layers import Flatten, Dense, Dropout
+from keras.optimizers import Adam
+from keras.losses import CategoricalCrossentropy
+from keras.preprocessing.image import ImageDataGenerator
+from keras.callbacks import LearningRateScheduler
 
-# Define data augmentation and preprocessing
-train_datagen = ImageDataGenerator(
-    rescale=1/255,  # Rescale pixel values to [0, 1]
-    rotation_range=20,  # Augmentation: randomly rotate images up to 20 degrees
-    width_shift_range=0.2,  # Augmentation: horizontally shift images
-    height_shift_range=0.2,  # Augmentation: vertically shift images
-    shear_range=0.2,  # Augmentation: shear transformation
-    zoom_range=0.2,  # Augmentation: random zoom
-    horizontal_flip=True,  # Augmentation: flip horizontally
-    fill_mode='nearest'  # How to fill in newly created pixels
-)
+# Define your learning rate schedule function
+def learning_rate_schedule(epoch):
+    if epoch < 10:
+        return 0.0001
+    elif epoch < 20:
+        return 0.00001
+    else:
+        return 0.000001
+    
+# Create the LearningRateScheduler callback
+lr_scheduler = LearningRateScheduler(learning_rate_schedule)
 
-validation_datagen=ImageDataGenerator(
-     rescale=1/255,  # Rescale pixel values to [0, 1]
-    rotation_range=20,  # Augmentation: randomly rotate images up to 20 degrees
-    width_shift_range=0.2,  # Augmentation: horizontally shift images
-    height_shift_range=0.2,  # Augmentation: vertically shift images
-    shear_range=0.2,  # Augmentation: shear transformation
-    zoom_range=0.2,  # Augmentation: random zoom
-    horizontal_flip=True,  # Augmentation: flip horizontally
-    fill_mode='nearest'  # How to fill in newly created pixels
-)
+# Load the pre-trained VGG-16 model without the top classification layers
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
 
-# Load and preprocess your data
-train_dataset = train_datagen.flow_from_directory(
-    'C://Users//HP//Downloads//training', target_size=(150, 150), batch_size=32, class_mode='categorical')
-
-validation_dataset=validation_datagen.flow_from_directory('C://Users//HP//Downloads//testing', target_size=(150,150), batch_size=32, class_mode='categorical')
-
-# Create a CNN model
+# Create a new model by adding custom classification layers on top of the base model
 model = Sequential()
-model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)))
-model.add(MaxPooling2D(2, 2))
-model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(MaxPooling2D(2, 2))
-model.add(Conv2D(128, (3, 3), activation='relu'))
-model.add(MaxPooling2D(2, 2))
+model.add(base_model)
 model.add(Flatten())
-model.add(Dense(512, activation='relu'))
-model.add(Dropout(0.25))  # Add dropout to reduce overfitting
-model.add(Dense(5, activation='softmax'))  # Output layer with 5 units for 5 classes
+model.add(Dense(4096, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(4096, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(5, activation='softmax'))  # Adjust the number of units for your specific task
+
+# Freeze the layers in the base model
+for layer in base_model.layers:
+    layer.trainable = False
 
 # Compile the model
-optim = keras.optimizers.Adam(learning_rate=0.0015)
-model.compile(loss='categorical_crossentropy',
-              optimizer=optim,
+model.compile(optimizer=Adam(learning_rate=0.0001), 
+              loss=CategoricalCrossentropy(),
               metrics=['accuracy'])
 
-# Train the model
-model.fit(train_dataset, epochs=45, validation_data=validation_dataset)  # You can adjust the number of epochs
+# Print a summary of the model's architecture
+model.summary()
+
+# Data augmentation for the training set
+train_datagen = ImageDataGenerator(
+    rescale=1.0 / 255,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+# Data augmentation for the validation set
+validation_datagen = ImageDataGenerator(rescale=1.0 / 255)
+
+# Specify the paths to your training and validation datasets
+train_data_directory = "C://Users//HP//training"
+validation_data_directory = "C://Users//HP//testing"
+
+# Load and augment training data
+train_generator = train_datagen.flow_from_directory(
+    train_data_directory,
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical'
+)
+
+# Load and augment validation data
+validation_generator = validation_datagen.flow_from_directory(
+    validation_data_directory,
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical'
+)
+
+# Train the model using the data generators
+history = model.fit(train_generator,
+                    steps_per_epoch=train_generator.samples // 32,
+                    epochs=15,
+                    validation_data=validation_generator,
+                    validation_steps=validation_generator.samples // 32,
+                    callbacks=[lr_scheduler]
+                    )
+
+# Save the model to a file
+model.save("vgg16_model.keras")
 
 
 
 
-# Save the trained model if desired
-#model.save('my_trained_model.h5')
-model_filename='my_trained_model.keras'
-model.save(model_filename)
-
-if os.path.exists(model_filename):
-    print(f"Model saved as {model_filename}")
-else:
-    print("Model was not saved!")
-current_directory = os.getcwd()
-
-# Specify the filename of your Keras model
-'''model_filename = "my_trained_model.keras"  # Replace with your actual model file name
-
-# Create the full file path by joining the directory and filename
-model_file_path = os.path.join(current_directory, model_filename)
-
-print("Location of your Keras model file:")
-print(model_file_path)'''
